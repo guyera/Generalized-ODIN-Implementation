@@ -1,0 +1,3 @@
+#!/bin/bash
+
+python -u main.py --magnitude 0 0.0014 0.0077 0.014 | tee results-4.txt

@@ -27,9 +27,11 @@ from scipy import misc
 import calMetric as m
 import calData as d
 import math
+from densenet import DenseNet3
+from densenetclassifier import DenseNetClassifier
 from cosinedeconf import CosineDeconf
 from deconfnet import DeconfNet
-#CUDA_DEVICE = 0
+#device = 0
 
 start = time.time()
 #loading data sets
@@ -45,11 +47,11 @@ transform = transforms.Compose([
 # loading neural network
 
 # Name of neural networks
-# Densenet trained on CIFAR-10:         densenet10
-# Densenet trained on CIFAR-100:        densenet100
+# Densenet trained on CIFAR-10:         dense_net10
+# Densenet trained on CIFAR-100:        dense_net100
 # Densenet trained on WideResNet-10:    wideresnet10
 # Densenet trained on WideResNet-100:   wideresnet100
-#nn_name = "densenet10"
+#nn_name = "dense_net10"
 
 #imName = "Imagenet"
 
@@ -57,31 +59,23 @@ transform = transforms.Compose([
 
 criterion = nn.CrossEntropyLoss()
 
-def update_module(module):
-    if isinstance(module, nn.BatchNorm2d):
-        module.track_running_stats = 1
-    else:
-        for i, (name, module1) in enumerate(module._modules.items()):
-            module1 = update_module(module1)
-    return module
-
-def test(nn_name, data_name, CUDA_DEVICE, epsilon, temperature, validate = False, validation_proportion = 0.4):
+def test(nn_name, data_name, device, noise_magnitudes, temperature, validate = False, validation_proportion = 0.4):
     
-    net1 = torch.load("../models/{}.pth".format(nn_name))
-
-    # The provided pretrained models were based on an old version of pytorch.
-    # The following code updates their BatchNorm2d layers to be compatible
-    # with the latest version.
-    for i, (name, module) in enumerate(net1._modules.items()):
-        module = update_module(module)
-    
+    #dense_net = torch.load("../models/{}.pth".format(nn_name))
+    #def __init__(self, depth, num_classes, growth_rate=12,
+    #             reduction=0.5, bottleneck=True, dropRate=0.0):
+    dense_net = DenseNet3(depth = 100, num_classes = 10)
+    dense_net.to(device)
+    dense_net_classifier = DenseNetClassifier(dense_net, temperature)
+    dense_net_classifier.to(device)
     # Construct g, h, and the composed deconf net
-    h = CosineDeconf(10, 10)
-    h.cuda(CUDA_DEVICE)
-    deconf_net = DeconfNet(net1, 10, 10, h)
+    h = CosineDeconf(dense_net.in_planes, 10)
+    h.to(device)
+    deconf_net = DeconfNet(dense_net, dense_net.in_planes, 10, h)
+    deconf_net.to(device)
 
-    optimizer1 = optim.SGD(deconf_net.parameters(), lr = 0.01, momentum = 0.9)
-    deconf_net.cuda(CUDA_DEVICE)
+    optimizer = optim.SGD(deconf_net.parameters(), lr = 0.01, momentum = 0.9, weight_decay = 0.0001)
+    #optimizer = optim.SGD(dense_net_classifier.parameters(), lr = 0.1, momentum = 0.9, weight_decay = 0.0001)
 
     test_set_out = None
     test_set_in = None
@@ -109,18 +103,42 @@ def test(nn_name, data_name, CUDA_DEVICE, epsilon, temperature, validate = False
                                      shuffle=True, num_workers=2)
 
     # Train the model
-    for epoch in range(1):
+    
+    deconf_net.train()
+    for epoch in range(100):
         print("Epoch #{}".format(epoch + 1))
         for batch_idx, (inputs, targets) in enumerate(train_loader_in):
-            break
-            inputs = inputs.cuda(CUDA_DEVICE)
-            targets = targets.cuda(CUDA_DEVICE)
-            optimizer1.zero_grad()
+            inputs = inputs.to(device)
+            targets = targets.to(device)
+            optimizer.zero_grad()
             softmax, _, _ = deconf_net(inputs)
             loss = criterion(softmax, targets)
             loss.backward()
-            optimizer1.step()
+            optimizer.step()
             total_loss = loss.item()
             print("Batch #{} Loss: {}".format(batch_idx + 1, total_loss))
-    d.testData(deconf_net, criterion, CUDA_DEVICE, test_loader_in, test_loader_out, nn_name, data_name, epsilon, temperature) 
-    m.metric(nn_name, data_name)
+    
+    """
+    dense_net_classifier.train()
+    for epoch in range(600):
+        print("Epoch #{}".format(epoch + 1))
+        for batch_idx, (inputs, targets) in enumerate(train_loader_in):
+            inputs = inputs.to(device)
+            targets = targets.to(device)
+            optimizer.zero_grad()
+            outputs = dense_net_classifier(inputs)
+            loss = criterion(outputs, targets)
+            total_loss = loss.item()
+            loss.backward()
+            optimizer.step()
+            print("Batch #{} Loss: {}".format(batch_idx + 1, total_loss))
+    """
+
+    #d.testData(deconf_net, criterion, device, test_loader_in, test_loader_out, nn_name, data_name, epsilon, temperature) 
+    for magnitude in noise_magnitudes:
+        print("----------------------------------------")
+        print("Testing magnitude {:.5f}".format(magnitude))
+        print("----------------------------------------")
+        d.testData(deconf_net, criterion, device, test_loader_in, test_loader_out, nn_name, data_name, magnitude, temperature) 
+        # d.testData(dense_net_classifier, criterion, device, test_loader_in, test_loader_out, nn_name, data_name, magnitude, temperature) 
+        m.metric(nn_name, data_name)

@@ -34,16 +34,16 @@ import cal as c
 
 parser = argparse.ArgumentParser(description='Pytorch Detecting Out-of-distribution examples in neural networks')
 
-parser.add_argument('--nn', default="densenet10", type=str,
-                    help='neural network name and training set')
-parser.add_argument('--out_dataset', default="Imagenet", type=str,
-                    help='out-of-distribution dataset')
-parser.add_argument('--magnitude', default=0.0014, type=float,
-                    help='perturbation magnitude')
-parser.add_argument('--temperature', default=1000, type=int,
-                    help='temperature scaling')
+parser.add_argument('--nn', default = "densenet10", type = str,
+                    help = 'neural network name and training set')
+parser.add_argument('--out_dataset', default = "Imagenet", type = str,
+                    help = 'out-of-distribution dataset')
+parser.add_argument('--magnitudes', nargs = '+', default = [0.0014], type = float,
+                    help = 'perturbation magnitudes')
+parser.add_argument('--temperature', default = 1, type = int,
+                    help = 'temperature scaling')
 parser.add_argument('--gpu', default = 0, type = int,
-		    help='gpu index')
+		    help = 'gpu index')
 parser.set_defaults(argument=True)
 
 
@@ -78,7 +78,7 @@ parser.set_defaults(argument=True)
 def main():
     global args
     args = parser.parse_args()
-    c.test(args.nn, args.out_dataset, args.gpu, args.magnitude, args.temperature)
+    c.test(args.nn, args.out_dataset, args.gpu, args.magnitudes, args.temperature)
 
 if __name__ == '__main__':
     main()

@@ -14,7 +14,7 @@ class CosineDeconf(nn.Module):
     def __init__(self, in_features, num_classes):
         super(CosineDeconf, self).__init__()
         
-        self.weights = torch.randn(size = (num_classes, in_features), requires_grad = True).cuda()
+        self.weights = torch.nn.Parameter(torch.randn(size = (num_classes, in_features), requires_grad = True), requires_grad = True).cuda()
 
     def forward(self, x):
         # Compute hadamard product of each image in x (actually fp(x))
