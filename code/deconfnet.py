@@ -25,7 +25,7 @@ class CosineDeconf(nn.Module):
         self.init_weights()
 
     def init_weights(self):
-        nn.init.kaiming_normal_(self.h.weight.data)
+        nn.init.kaiming_normal_(self.h.weight.data, nonlinearity = "relu")
 
     def forward(self, x):
         x = norm(x)
@@ -42,7 +42,7 @@ class EuclideanDeconf(nn.Module):
         self.init_weights()
 
     def init_weights(self):
-        nn.init.kaiming_normal_(self.h.weight.data)
+        nn.init.kaiming_normal_(self.h.weight.data, nonlinearity = "relu")
 
     def forward(self, x):
         ret = -((x -self.h.weight)**2)
@@ -56,7 +56,7 @@ class InnerDeconf(nn.Module):
         self.init_weights()
 
     def init_weights(self):
-        nn.init.kaiming_normal_(self.h.weight.data)
+        nn.init.kaiming_normal_(self.h.weight.data, nonlinearity = "relu")
         self.h.bias.data = torch.zeros(size = self.h.bias.size())
 
     def forward(self, x):
