@@ -22,10 +22,10 @@ class CosineDeconf(nn.Module):
         super(CosineDeconf, self).__init__()
 
         self.h = nn.Linear(in_features, num_classes, bias= False)
-        self.init_weights(in_features)
+        self.init_weights()
 
-    def init_weights(self, in_features):
-        self.h.weight.data = torch.randn(size = self.h.weight.size()) * math.sqrt(2 / in_features)
+    def init_weights(self):
+        nn.init.kaiming_normal_(self.h.weight.data)
 
     def forward(self, x):
         x = norm(x)
@@ -39,10 +39,10 @@ class EuclideanDeconf(nn.Module):
         super(EuclideanDeconf, self).__init__()
 
         self.h = nn.Linear(in_features, num_classes, bias= False)
-        self.init_weights(in_features)
+        self.init_weights()
 
-    def init_weights(self, in_features):
-        self.h.weight.data = torch.randn(size = self.h.weight.size()) * math.sqrt(2 / in_features)
+    def init_weights(self):
+        nn.init.kaiming_normal_(self.h.weight.data)
 
     def forward(self, x):
         ret = -((x -self.h.weight)**2)
@@ -53,10 +53,10 @@ class InnerDeconf(nn.Module):
         super(InnerDeconf, self).__init__()
 
         self.h = nn.Linear(in_features, num_classes)
-        self.init_weights(in_features)
+        self.init_weights()
 
-    def init_weights(self, in_features):
-        self.h.weight.data = torch.randn(size = self.h.weight.size()) * math.sqrt(2 / in_features)
+    def init_weights(self):
+        nn.init.kaiming_normal_(self.h.weight.data)
         self.h.bias.data = torch.zeros(size = self.h.bias.size())
 
     def forward(self, x):
