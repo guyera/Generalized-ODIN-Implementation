@@ -34,51 +34,19 @@ import cal as c
 
 parser = argparse.ArgumentParser(description='Pytorch Detecting Out-of-distribution examples in neural networks')
 
-parser.add_argument('--nn', default = "densenet10", type = str,
-                    help = 'neural network name and training set')
-parser.add_argument('--out_dataset', default = "Imagenet", type = str,
+parser.add_argument('--out-dataset', default = "Imagenet", type = str,
                     help = 'out-of-distribution dataset')
-parser.add_argument('--magnitudes', nargs = '+', default = [0.0014], type = float,
-                    help = 'perturbation magnitudes')
-parser.add_argument('--temperature', default = 1, type = int,
-                    help = 'temperature scaling')
 parser.add_argument('--gpu', default = 0, type = int,
+		    help = 'gpu index')
+parser.add_argument('--magnitudes', nargs = '+', default = [0.0025, 0.005, 0.01, 0.02, 0.04, 0.08], type = float,
+                    help = 'perturbation magnitudes')
+parser.add_argument('--epochs', default = 20, type = int,
 		    help = 'gpu index')
 parser.set_defaults(argument=True)
 
-
-
-
-
-# Setting the name of neural networks
-
-# Densenet trained on CIFAR-10:         densenet10
-# Densenet trained on CIFAR-100:        densenet100
-# Wide-ResNet trained on CIFAR-10:    wideresnet10
-# Wide-ResNet trained on CIFAR-100:   wideresnet100
-#nnName = "densenet10"
-
-# Setting the name of the out-of-distribution dataset
-
-# Tiny-ImageNet (crop):     Imagenet
-# Tiny-ImageNet (resize):   Imagenet_resize
-# LSUN (crop):              LSUN
-# LSUN (resize):            LSUN_resize
-# iSUN:                     iSUN
-# Gaussian noise:           Gaussian
-# Uniform  noise:           Uniform
-#dataName = "Imagenet"
-
-
-# Setting the perturbation magnitude
-#epsilon = 0.0014
-
-# Setting the temperature
-#temperature = 1000
 def main():
-    global args
     args = parser.parse_args()
-    c.test(args.nn, args.out_dataset, args.gpu, args.magnitudes, args.temperature)
+    c.test(args.out_dataset, args.gpu, args.magnitudes, args.epochs)
 
 if __name__ == '__main__':
     main()

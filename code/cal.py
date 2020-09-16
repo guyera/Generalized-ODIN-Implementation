@@ -12,100 +12,80 @@ Created on Sat Sep 19 20:55:56 2015
 @author: liangshiyu
 """
 
-from __future__ import print_function
 import torch
-from torch.autograd import Variable
 import torch.nn as nn
-import torch.nn.functional as F
 import numpy as np
 import torch.optim as optim
 import torchvision
 import torchvision.transforms as transforms
-import numpy as np
-import time
-from scipy import misc
 import calMetric as m
 import calData as d
 import math
 from densenet import DenseNet3
-from densenetclassifier import DenseNetClassifier
-from cosinedeconf import CosineDeconf
-from deconfnet import DeconfNet
-#device = 0
-
-start = time.time()
-#loading data sets
+from deconfnet import DeconfNet, CosineDeconf
 
 transform = transforms.Compose([
     transforms.ToTensor(),
     transforms.Normalize((125.3/255, 123.0/255, 113.9/255), (63.0/255, 62.1/255.0, 66.7/255.0)),
 ])
 
-
-
-
-# loading neural network
-
-# Name of neural networks
-# Densenet trained on CIFAR-10:         dense_net10
-# Densenet trained on CIFAR-100:        dense_net100
-# Densenet trained on WideResNet-10:    wideresnet10
-# Densenet trained on WideResNet-100:   wideresnet100
-#nn_name = "dense_net10"
-
-#imName = "Imagenet"
-
-
-
 criterion = nn.CrossEntropyLoss()
 
-def test(nn_name, data_name, device, noise_magnitudes, temperature, validate = False, validation_proportion = 0.4):
-    
-    #dense_net = torch.load("../models/{}.pth".format(nn_name))
+def test(data_name, device, noise_magnitudes, epochs, validation_proportion = 0.15):
     #def __init__(self, depth, num_classes, growth_rate=12,
     #             reduction=0.5, bottleneck=True, dropRate=0.0):
     dense_net = DenseNet3(depth = 100, num_classes = 10)
     dense_net.to(device)
-    dense_net_classifier = DenseNetClassifier(dense_net, temperature)
-    dense_net_classifier.to(device)
     # Construct g, h, and the composed deconf net
     h = CosineDeconf(dense_net.in_planes, 10)
     h.to(device)
     deconf_net = DeconfNet(dense_net, dense_net.in_planes, 10, h)
     deconf_net.to(device)
 
-    optimizer = optim.SGD(deconf_net.parameters(), lr = 0.01, momentum = 0.9, weight_decay = 0.0001)
-    #optimizer = optim.SGD(dense_net_classifier.parameters(), lr = 0.1, momentum = 0.9, weight_decay = 0.0001)
-
-    test_set_out = None
-    test_set_in = None
+    parameters = []
+    h_parameters = []
+    for name, parameter in deconf_net.named_parameters():
+        if name == "h.h.weight" or name == "h.h.bias":
+            h_parameters.append(parameter)
+        else:
+            parameters.append(parameter)
+    optimizer = optim.SGD(parameters, lr = 0.1, momentum = 0.9, weight_decay = 0.0001)
+    scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones = [int(epochs * 0.5), int(epochs * 0.75)], gamma = 0.1)
+    h_optimizer = optim.SGD(h_parameters, lr = 0.1, momentum = 0.9) # No weight decay
+    h_scheduler = optim.lr_scheduler.MultiStepLR(h_optimizer, milestones = [int(epochs * 0.5), int(epochs * 0.75)], gamma = 0.1)
 
     test_set_out = torchvision.datasets.ImageFolder("../data/{}".format(data_name), transform=transform)
-    test_loader_out = torch.utils.data.DataLoader(test_set_out, batch_size=1,
+    test_loader_out = torch.utils.data.DataLoader(test_set_out, batch_size=100,
                                      shuffle=False, num_workers=2)
 
     train_set_in = torchvision.datasets.CIFAR10(root='../data', train=True, download=True, transform=transform)
+    # Don't get the train_loader_in yet, since the train_set_in will be split into validation and training data
+
     test_set_in = torchvision.datasets.CIFAR10(root='../data', train=False, download=True, transform=transform)
-    
-    # Split the test_loader_in into a validation set and a test set, based on the validation_proportion
-    validation_range = np.arange(0, len(test_set_in), 1. / validation_proportion)
-    validation_indices = [math.floor(x) for x in validation_range]
-    if validate:
-        indices = validation_indices
-    else:
-        validation_indices_set = set(validation_indices)
-        indices = [x for x in range(len(test_set_in)) if x not in validation_indices_set]
-    
-    test_set_in = torch.utils.data.Subset(test_set_in, indices)
-    test_loader_in = torch.utils.data.DataLoader(test_set_in, batch_size=1,
+    test_loader_in = torch.utils.data.DataLoader(test_set_in, batch_size=100,
                                      shuffle=False, num_workers=2)
-    train_loader_in = torch.utils.data.DataLoader(train_set_in, batch_size=100,
+    
+    # Split the train_set_in into a training set and a validation set, based on the validation_proportion
+    # Stagger the elements used for validation
+    validation_range = np.arange(0, len(train_set_in), 1. / validation_proportion)
+    validation_indices = [math.floor(x) for x in validation_range]
+    
+    # Use the remaining (complementary) indices as the training set
+    validation_indices_set = set(validation_indices)
+    training_indices = [x for x in range(len(train_set_in)) if x not in validation_indices_set]
+    
+    # Construct the subsets and dataloaders
+    validation_set_in = torch.utils.data.Subset(train_set_in, validation_indices)
+    validation_loader_in = torch.utils.data.DataLoader(validation_set_in, batch_size=100,
+                                     shuffle=False, num_workers=2)
+    train_set_in = torch.utils.data.Subset(train_set_in, training_indices)
+    train_loader_in = torch.utils.data.DataLoader(train_set_in, batch_size=64,
                                      shuffle=True, num_workers=2)
 
     # Train the model
     
     deconf_net.train()
-    for epoch in range(100):
+    for epoch in range(epochs):
         print("Epoch #{}".format(epoch + 1))
         for batch_idx, (inputs, targets) in enumerate(train_loader_in):
             inputs = inputs.to(device)
@@ -115,30 +95,30 @@ def test(nn_name, data_name, device, noise_magnitudes, temperature, validate = F
             loss = criterion(softmax, targets)
             loss.backward()
             optimizer.step()
+            h_optimizer.step()
             total_loss = loss.item()
             print("Batch #{} Loss: {}".format(batch_idx + 1, total_loss))
-    
-    """
-    dense_net_classifier.train()
-    for epoch in range(600):
-        print("Epoch #{}".format(epoch + 1))
-        for batch_idx, (inputs, targets) in enumerate(train_loader_in):
-            inputs = inputs.to(device)
-            targets = targets.to(device)
-            optimizer.zero_grad()
-            outputs = dense_net_classifier(inputs)
-            loss = criterion(outputs, targets)
-            total_loss = loss.item()
-            loss.backward()
-            optimizer.step()
-            print("Batch #{} Loss: {}".format(batch_idx + 1, total_loss))
-    """
+        h_scheduler.step()
+        scheduler.step()
 
-    #d.testData(deconf_net, criterion, device, test_loader_in, test_loader_out, nn_name, data_name, epsilon, temperature) 
-    for magnitude in noise_magnitudes:
+    for noise_magnitude in noise_magnitudes:
         print("----------------------------------------")
-        print("Testing magnitude {:.5f}".format(magnitude))
+        print("        Noise magnitude {:.5f}         ".format(noise_magnitude))
         print("----------------------------------------")
-        d.testData(deconf_net, criterion, device, test_loader_in, test_loader_out, nn_name, data_name, magnitude, temperature) 
-        # d.testData(dense_net_classifier, criterion, device, test_loader_in, test_loader_out, nn_name, data_name, magnitude, temperature) 
-        m.metric(nn_name, data_name)
+        print("------------------------")
+        print("       Validation       ")
+        print("------------------------")
+        validation_results = d.testData(deconf_net, device, validation_loader_in, noise_magnitude) 
+        m.validate(validation_results)
+        print("------------------------")
+        print("        Testing         ")
+        print("------------------------")
+        print("------------------")
+        print("     Nominals     ")
+        print("------------------")
+        id_test_results = d.testData(deconf_net, device, test_loader_in, noise_magnitude) 
+        print("------------------")
+        print("    Anomalies     ")
+        print("------------------")
+        ood_test_results = d.testData(deconf_net, device, test_loader_out, noise_magnitude) 
+        m.test(id_test_results, ood_test_results)

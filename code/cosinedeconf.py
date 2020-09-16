@@ -13,8 +13,9 @@ import torch.nn.functional as F
 class CosineDeconf(nn.Module):
     def __init__(self, in_features, num_classes):
         super(CosineDeconf, self).__init__()
-        
-        self.weights = torch.nn.Parameter(torch.randn(size = (num_classes, in_features), requires_grad = True), requires_grad = True).cuda()
+        # He or Xavier Normal initialization of class centroids: normal distribution with mean = 0 and
+        # var = 2 / (fan_in + num_casses) or 1 / (fan_in + num_classes)
+        self.weights = torch.nn.Parameter(torch.randn(size = (num_classes, in_features)) * math.sqrt(2 / (in_features)))
 
     def forward(self, x):
         # Compute hadamard product of each image in x (actually fp(x))
