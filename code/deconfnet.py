@@ -45,7 +45,9 @@ class EuclideanDeconf(nn.Module):
         nn.init.kaiming_normal_(self.h.weight.data, nonlinearity = "relu")
 
     def forward(self, x):
-        ret = -((x -self.h.weight)**2)
+        x = x.unsqueeze(2) #(batch, latent, 1)
+        h = self.h.weight.T.unsqueeze(0) #(1, latent, num_classes)
+        ret = -((x -h).pow(2)).sum(1)
         return ret
         
 class InnerDeconf(nn.Module):
@@ -88,13 +90,10 @@ class DeconfNet(nn.Module):
         # denominators is an N x 1 tensor.
         # Expand the denominators so that they repeat
         # across classes for each image (N x M)
-        expanded_denominators = denominators.expand(-1, self.num_classes)
         
         # Now, broadcast the denominators per image across the numerators by division
         quotients = numerators / denominators
         
-        # Pass through softmax layer
-        softmax = self.softmax(quotients)
 
-        # Return the softmax (used during training), numerators, and denominators
-        return softmax, numerators, denominators
+        # logits, numerators, and denominators
+        return quotients, numerators, denominators

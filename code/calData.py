@@ -24,13 +24,14 @@ import torchvision.transforms as transforms
 import numpy as np
 import time
 from scipy import misc
+from tqdm import tqdm
 
 def testData(model, CUDA_DEVICE, data_loader, noise_magnitude):
     model.eval()
     t0 = time.time()
     num_batches = len(data_loader)
     results = None
-    for j, (images, _) in enumerate(data_loader):
+    for j, (images, _) in enumerate(tqdm(data_loader)):
         images = Variable(images.to(CUDA_DEVICE), requires_grad = True)
         _, outputs, _ = model(images)
         
@@ -59,11 +60,6 @@ def testData(model, CUDA_DEVICE, data_loader, noise_magnitude):
         else:
             results += temp_results
         
-        print("{:4}/{:4} batches processed, {:.1f} seconds used.".format(j + 1, num_batches, time.time()-t0))
-        t0 = time.time()
-        
-        if j == num_batches - 1:
-            break
     return np.array(results)
 
 """

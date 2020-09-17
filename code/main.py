@@ -36,17 +36,19 @@ parser = argparse.ArgumentParser(description='Pytorch Detecting Out-of-distribut
 
 parser.add_argument('--out-dataset', default = "Imagenet", type = str,
                     help = 'out-of-distribution dataset')
+parser.add_argument('--h-type', default = "cosine", type = str,
+                    help = 'cosine|inner|euclid')
 parser.add_argument('--gpu', default = 0, type = int,
 		    help = 'gpu index')
 parser.add_argument('--magnitudes', nargs = '+', default = [0.0025, 0.005, 0.01, 0.02, 0.04, 0.08], type = float,
                     help = 'perturbation magnitudes')
-parser.add_argument('--epochs', default = 20, type = int,
+parser.add_argument('--epochs', default = 300, type = int,
 		    help = 'gpu index')
 parser.set_defaults(argument=True)
 
 def main():
     args = parser.parse_args()
-    c.test(args.out_dataset, args.gpu, args.magnitudes, args.epochs)
+    c.test(args.out_dataset, args.gpu, args.magnitudes, args.epochs, h_type=args.h_type)
 
 if __name__ == '__main__':
     main()
