@@ -30,7 +30,7 @@ def testData(model, CUDA_DEVICE, data_loader, noise_magnitude):
     model.eval()
     t0 = time.time()
     num_batches = len(data_loader)
-    results = None
+    results = []
     for j, (images, _) in enumerate(tqdm(data_loader)):
         images = Variable(images.to(CUDA_DEVICE), requires_grad = True)
         _, outputs, _ = model(images)
@@ -54,11 +54,8 @@ def testData(model, CUDA_DEVICE, data_loader, noise_magnitude):
         _, outputs, _ = model(tempInputs)
         nn_outputs = outputs.data.cpu()
         nn_outputs = nn_outputs.numpy()
-        temp_results = np.max(nn_outputs, axis = 1).tolist()
-        if results is None:
-            results = temp_results
-        else:
-            results += temp_results
+        results.extend(np.max(nn_outputs, axis = 1).tolist())
+        
         
     return np.array(results)
 

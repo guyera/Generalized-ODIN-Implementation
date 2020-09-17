@@ -47,7 +47,7 @@ class EuclideanDeconf(nn.Module):
     def forward(self, x):
         x = x.unsqueeze(2) #(batch, latent, 1)
         h = self.h.weight.T.unsqueeze(0) #(1, latent, num_classes)
-        ret = -((x -h).pow(2)).sum(1)
+        ret = -((x -h).pow(2)).mean(1)
         return ret
         
 class InnerDeconf(nn.Module):
