@@ -78,7 +78,7 @@ class DeconfNet(nn.Module):
         self.baseline = baseline
 
         if baseline:
-            self.ones = nn.Parameter(torch.Tensor([1]), requires_grad = False)
+            self.ones = nn.Parameter(torch.Tensor([1]), requires_grad = True)
         else:
             self.g = nn.Sequential(
                 nn.Linear(in_features, 1),

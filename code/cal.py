@@ -308,12 +308,12 @@ def main():
             print(f'Score function: {score_func}')
             for noise_magnitude in noise_magnitudes:
                 print(f'Noise magnitude {noise_magnitude:.5f}         ')
-                validation_results =  np.average(testData(deconf_net, device, val_data, noise_magnitude, criterion, title = 'Validating'))
+                validation_results =  np.average(testData(deconf_net, device, val_data, noise_magnitude, criterion, score_func, title = 'Validating'))
                 print('ID Validation Score:',validation_results)
                 
-                id_test_results = testData(deconf_net, device, test_data, noise_magnitude, criterion, title = 'Testing ID') 
+                id_test_results = testData(deconf_net, device, test_data, noise_magnitude, criterion, score_func, title = 'Testing ID') 
                 
-                ood_test_results = testData(deconf_net, device, open_data, noise_magnitude, criterion, title = 'Testing OOD')
+                ood_test_results = testData(deconf_net, device, open_data, noise_magnitude, criterion, score_func, title = 'Testing OOD')
                 auroc = calc_auroc(id_test_results, ood_test_results)*100
                 tnrATtpr95 = calc_tnr(id_test_results, ood_test_results)
                 print('AUROC:', auroc, 'TNR@TPR95:', tnrATtpr95)
@@ -367,22 +367,23 @@ def testData(model, CUDA_DEVICE, data_loader, noise_magnitude, criterion, score_
         max_scores.backward(torch.ones(len(max_scores)).to(CUDA_DEVICE))
         
         # Normalizing the gradient to binary in {-1, 1}
-        gradient = torch.ge(images.grad.data, 0)
-        gradient = (gradient.float() - 0.5) * 2
-        # Normalizing the gradient to the same space of image
-        gradient[::, 0] = (gradient[::, 0] )/(63.0/255.0)
-        gradient[::, 1] = (gradient[::, 1] )/(62.1/255.0)
-        gradient[::, 2] = (gradient[::, 2] )/(66.7/255.0)
-        # Adding small perturbations to images
-        tempInputs = torch.add(images.data, gradient, alpha=noise_magnitude)
+        if images.grad is not None:
+            gradient = torch.ge(images.grad.data, 0)
+            gradient = (gradient.float() - 0.5) * 2
+            # Normalizing the gradient to the same space of image
+            gradient[::, 0] = (gradient[::, 0] )/(63.0/255.0)
+            gradient[::, 1] = (gradient[::, 1] )/(62.1/255.0)
+            gradient[::, 2] = (gradient[::, 2] )/(66.7/255.0)
+            # Adding small perturbations to images
+            tempInputs = torch.add(images.data, gradient, alpha=noise_magnitude)
         
-        # Now calculate score
-        if score_func == 'h':
-            _, scores, _ = model(images)
-        elif score_func == 'g':
-            _, _, scores = model(images)
-        elif score_func == 'logit':
-            scores, _, _ = model(images)
+            # Now calculate score
+            if score_func == 'h':
+                _, scores, _ = model(images)
+            elif score_func == 'g':
+                _, _, scores = model(images)
+            elif score_func == 'logit':
+                scores, _, _ = model(images)
 
         results.extend(torch.max(scores, dim=1)[0].data.cpu().numpy())
         
