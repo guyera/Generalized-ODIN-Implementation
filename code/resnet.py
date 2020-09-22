@@ -44,7 +44,8 @@ class ResNet(nn.Module):
         self.layer2 = self._make_layer(block, 128, num_blocks[1], stride=2)
         self.layer3 = self._make_layer(block, 256, num_blocks[2], stride=2)
         self.layer4 = self._make_layer(block, 512, num_blocks[3], stride=2)
-        self.linear = nn.Linear(512*block.expansion, num_classes)
+        self.output_size = 512*block.expansion
+        self.linear = nn.Linear(self.output_size, num_classes)
 
     def _make_layer(self, block, planes, num_blocks, stride):
         strides = [stride] + [1]*(num_blocks-1)
@@ -56,7 +57,7 @@ class ResNet(nn.Module):
 
     def forward(self, x):
         out = self.features(x)
-        out = self.linear(out)
+        # out = self.linear(out)
         # return F.log_softmax(out, dim=1)
         return out
 

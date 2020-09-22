@@ -66,34 +66,39 @@ class InnerDeconf(nn.Module):
 
 
 class DeconfNet(nn.Module):
-    def __init__(self, underlying_model, in_features, num_classes, h):
+    def __init__(self, underlying_model, in_features, num_classes, h, baseline):
         super(DeconfNet, self).__init__()
         
         self.num_classes = num_classes
 
         self.underlying_model = underlying_model
         
-        self.g = nn.Sequential(
-            nn.Linear(in_features, 1),
-            nn.BatchNorm1d(1),
-            nn.Sigmoid()
-        )
-        
         self.h = h
+        
+        self.baseline = baseline
+
+        if baseline:
+            self.ones = nn.Parameter(torch.Tensor([1]), requires_grad = True)
+        else:
+            self.g = nn.Sequential(
+                nn.Linear(in_features, 1),
+                nn.BatchNorm1d(1),
+                nn.Sigmoid()
+            )
         
         self.softmax = nn.Softmax()
     
     def forward(self, x):
         output = self.underlying_model(x)
         numerators = self.h(output)
-        denominators = self.g(output)
-        # denominators is an N x 1 tensor.
-        # Expand the denominators so that they repeat
-        # across classes for each image (N x M)
+        
+        if self.baseline:
+            denominators = torch.unsqueeze(self.ones.expand(len(numerators)), 1)
+        else:
+            denominators = self.g(output)
         
         # Now, broadcast the denominators per image across the numerators by division
         quotients = numerators / denominators
-        
 
         # logits, numerators, and denominators
         return quotients, numerators, denominators

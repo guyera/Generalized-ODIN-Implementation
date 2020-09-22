@@ -103,8 +103,8 @@ class DenseNet3(nn.Module):
         # global average pooling and classifier
         self.bn1 = nn.BatchNorm2d(in_planes)
         self.relu = nn.ReLU(inplace=True)
-        self.fc = nn.Linear(in_planes, num_classes)
-        self.in_planes = in_planes
+        self.output_size = in_planes
+        self.fc = nn.Linear(self.output_size, num_classes)
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
@@ -122,6 +122,6 @@ class DenseNet3(nn.Module):
         out = self.block3(out)
         out = self.relu(self.bn1(out))
         out = F.avg_pool2d(out, 8)
-        out = out.view(-1, self.in_planes)
+        out = out.view(-1, self.output_size)
         return out
         # return self.fc(out)
