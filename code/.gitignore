@@ -1,1 +1,3 @@
-softmax_scores/
+data/
+__pycache__/
+experiments/
