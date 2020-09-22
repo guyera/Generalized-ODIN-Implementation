@@ -40,8 +40,8 @@ r_mean = 125.3/255
 g_mean = 123.0/255
 b_mean = 113.9/255
 r_std = 63.0/255
-g_std = 62.1
-b_std = 66.7
+g_std = 62.1/255
+b_std = 66.7/255
 
 train_transform = transforms.Compose([
     transforms.RandomCrop(32, padding = 4),
