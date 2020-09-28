@@ -353,12 +353,15 @@ def testData(model, CUDA_DEVICE, data_loader, noise_magnitude, criterion, score_
         data_iter.set_description(f'{title} | Processing image batch {j + 1}/{num_batches}')
         images = Variable(images.to(CUDA_DEVICE), requires_grad = True)
         
+        
+        logits, h, g = model(images)
+
         if score_func == 'h':
-            _, scores, _ = model(images)
+            scores = h
         elif score_func == 'g':
-            _, _, scores = model(images)
+            scores = g
         elif score_func == 'logit':
-            scores, _, _ = model(images)
+            scores = logits
 
         # Calculating the perturbation we need to add, that is,
         # the sign of gradient of the numerator w.r.t. input
@@ -378,12 +381,14 @@ def testData(model, CUDA_DEVICE, data_loader, noise_magnitude, criterion, score_
             tempInputs = torch.add(images.data, gradient, alpha=noise_magnitude)
         
             # Now calculate score
+            logits, h, g = model(tempInputs)
+
             if score_func == 'h':
-                _, scores, _ = model(images)
+                scores = h
             elif score_func == 'g':
-                _, _, scores = model(images)
+                scores = g
             elif score_func == 'logit':
-                scores, _, _ = model(images)
+                scores = logits
 
         results.extend(torch.max(scores, dim=1)[0].data.cpu().numpy())
         
