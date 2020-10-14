@@ -65,28 +65,9 @@ h_dict = {
 
 
 
-def kliep_loss(logits, labels, max_ratio=50):
-    softplus = nn.Softplus()
-    logits = torch.clamp(logits,min=-1*max_ratio, max=max_ratio)
-    
-    #preds  = torch.softmax(logits,dim=1)
-    preds  = softplus(logits)
-    #preds  = torch.sigmoid(logits) * 10
-
-    maxlog = torch.log(torch.FloatTensor([max_ratio])).to(preds.device)
-    
-    y = torch.eye(preds.size(1))
-    labels = y[labels].to(preds.device)
-
-    inlier_loss  = (labels * (maxlog-torch.log(preds))).sum(1)
-    outlier_loss = ((1-labels) * (preds)).mean(1)
-    loss = (inlier_loss + outlier_loss).mean()#/preds.size(1)
-
-    return loss
 
 losses_dict = {
     'ce':nn.CrossEntropyLoss(),
-    'kliep': kliep_loss, 
 }
 
 generating_loaders_dict = {
