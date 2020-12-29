@@ -1,6 +1,6 @@
 # Generalized-ODIN-Implementation
 
-This is a (reproduced) implementation of the method described in [this paper](https://arxiv.org/pdf/2002.11297.pdf). Note that this implementation is not currently capable of perfectly reproducing the results published in the paper, though the results are close; the reason for this is unknown. If you would like to contribute, please see the contribution section below.
+This is a (reproduced) implementation of the method described in [this paper](https://arxiv.org/pdf/2002.11297.pdf). Note that this implementation is not currently capable of perfectly reproducing the results published in the paper, though the results are close; the reason for this is unknown. If you would like to contribute, please see the "contributions" section in this README.
 
 ## Running the demo
 
