@@ -11,7 +11,5 @@ Main two files are cal.py and deconfnet.py
 To train, simply call
 ```python cal.py ```
 
-There are many arguments which may be supplied when running the program. However, this project is still very much a work in progress; feel free to experiment with them at your discretion.
-
 ## Contributions
-If you would like to contribute to the project, feel free to open issues and make pull requests. While the maintainers of this repository are often busy with other research, and while updates may be infrequent, this repository is still actively maintained; your issues and pull requests will not go unnoticed.
+If you would like to contribute to the project, feel free to open issues and make pull requests.
